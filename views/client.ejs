@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EJS Example</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js" defer></script>
+    <style>
+      /* Style to position videos side by side */
+      .video-container {
+        display: flex;
+      }
+
+      .video-container video {
+        width: 50%; /* Each video takes half the width */
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>VideoChat</h1>
+    <div class="video-container">
+      <video id="myself" autoplay playsinline controls="false"></video>
+    </div>
+  </body>
+</html>
