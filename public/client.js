@@ -103,6 +103,7 @@ const startLocalStream = async () => {
     const stream = await openMediaDevices({ video: true, audio: true });
     const localVideo = document.querySelector("video#myself");
     localVideo.srcObject = stream;
+    return stream;
   } catch (error) {
     console.error("Error accessing media devices:", error);
   }
@@ -119,7 +120,7 @@ function callPerson(socketUsername) {
 }
 
 //Main function
-startLocalStream().then(() => {
+startLocalStream().then((stream) => {
   //The offer we receive is our SDP, which we can send to other clients. We create an offer and send it to the server for storage through the "addICE" function.
   localConnection.onicecandidate = (event) => {
     console.log(`Received ICE candidate after opening data channel`);
@@ -130,20 +131,18 @@ startLocalStream().then(() => {
     console.log(`New remote candidate`);
     console.log(JSON.stringify(remoteConnection.localDescription));
   };
+
+  remoteConnection.addEventListener("track", async (event) => {
+    console.log("Track event listener triggered");
+    const otherVideo = document.querySelector("video#other");
+    otherVideo.srcObject = stream;
+  });
   dataChannel.onopen = (event) => {
     console.log("Connection open");
   };
-
-  remoteConnection.ondatachannel = (event) => {
-    console.log(`Triggered step 1`);
-    remoteConnection.myDataChannel = event.channel;
-    remoteConnection.dataChannel.onmessage = (event) => {
-      console.log(`New message: ${event.data}`);
-    };
-    remoteConnection.myDataChannel.onopen = (event) => {
-      console.log(`Connection opened`);
-    };
-  };
+  stream.getTracks().forEach((track) => {
+    localConnection.addTrack(track, stream);
+  });
   localConnection
     .createOffer()
     .then((offer) => {

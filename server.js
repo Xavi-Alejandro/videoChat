@@ -1,6 +1,17 @@
 const express = require("express");
-const app = express();
 const path = require("path");
+const https = require("https");
+const fs = require("fs");
+const socketIO = require("socket.io");
+
+const options = {
+  key: fs.readFileSync(path.join(__dirname, "key.pem")),
+  cert: fs.readFileSync(path.join(__dirname, "cert.pem")),
+};
+
+const app = express();
+const server = https.createServer(options, app);
+const io = socketIO(server);
 
 const HTTP_PORT = process.env.PORT || 8080;
 
@@ -8,17 +19,6 @@ const HTTP_PORT = process.env.PORT || 8080;
 app.set("view engine", "ejs");
 
 app.use(express.static(path.join(__dirname, "public")));
-
-//Keep track of date and time
-
-//Setup socket.io
-let http = require("http").Server(app);
-const io = require("socket.io")(http, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
 
 //Add a map of all clients
 let clientMap = new Map();
@@ -75,6 +75,7 @@ io.on("connection", function (socket) {
     console.log(`Attempting to call ${userName}`);
     let callerSocket = socket.id;
     let foundSocket = "empty";
+    let foundICE;
 
     //1. Find socket ID with username, then obtain socket.
     clientMap.forEach((objectReference) => {
@@ -91,9 +92,10 @@ io.on("connection", function (socket) {
       if (!(foundSocket === "empty")) {
         console.log(`User name ${userName} has been found!.`);
         //2. send a message to said socket with the caller's ICE.
+        foundICE = clientMap.get(socket.id).ICE;
         io.to(objectReference.socket.id).emit("remote ICE", {
           callerSocket: callerSocket,
-          callerICE: objectReference.ICE,
+          callerICE: foundICE,
         });
         console.log(`Emmitted to socket ${objectReference.socket.id}.
         From socket: ${socket.id}`);
@@ -123,6 +125,6 @@ app.get("/", (req, res) => {
 });
 
 //Listen on port
-http.listen(HTTP_PORT, () => {
-  console.log("listening on: " + HTTP_PORT);
+server.listen(HTTP_PORT, () => {
+  console.log("Server is running on port 3000");
 });
