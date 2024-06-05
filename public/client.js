@@ -11,19 +11,26 @@ const handleRemoteConnection = async (remoteICE, remoteSocket) => {
       .setRemoteDescription(JSON.parse(rcVariable))
       .then((variable) => {
         console.log("Offer set");
-      })
-      .then(() => {
-        remoteConnection.createAnswer().then((answer) => {
-          remoteConnection.setLocalDescription(answer).then(() => {
-            setTimeout(() => {
-              console.log("Answer created");
-              socket.emit("send answer", {
-                ICE: JSON.stringify(remoteConnection.localDescription),
-                socket: remoteSocket,
+        //Add local stream to this
+        startLocalStream()
+          .then((stream) => {
+            stream.getTracks().forEach((track) => {
+              remoteConnection.addTrack(track, stream); //Add tracks to stream.
+            });
+          })
+          .then(() => {
+            remoteConnection.createAnswer().then((answer) => {
+              remoteConnection.setLocalDescription(answer).then(() => {
+                setTimeout(() => {
+                  console.log("Answer created");
+                  socket.emit("send answer", {
+                    ICE: JSON.stringify(remoteConnection.localDescription),
+                    socket: remoteSocket,
+                  });
+                }, "5000");
               });
-            }, "5000");
+            });
           });
-        });
       });
   } catch (error) {
     console.log(`There was an error on handling remote connection: ${error}`);
@@ -121,28 +128,37 @@ function callPerson(socketUsername) {
 
 //Main function
 startLocalStream().then((stream) => {
+  stream.getTracks().forEach((track) => {
+    localConnection.addTrack(track, stream); //Add tracks to stream.
+  });
+
   //The offer we receive is our SDP, which we can send to other clients. We create an offer and send it to the server for storage through the "addICE" function.
   localConnection.onicecandidate = (event) => {
     console.log(`Received ICE candidate after opening data channel`);
     console.log(JSON.stringify(localConnection.localDescription));
   };
 
+  remoteConnection.addEventListener("track", (event) => {
+    console.log("Track event listener triggered");
+    const otherVideo = document.querySelector("video#other");
+    otherVideo.srcObject = event.streams[0];
+  });
+
+  localConnection.addEventListener("track", (event) => {
+    console.log("Track event listener triggered");
+    const otherVideo = document.querySelector("video#other");
+    otherVideo.srcObject = event.streams[0];
+  });
+
   remoteConnection.onicecandidate = (event) => {
     console.log(`New remote candidate`);
     console.log(JSON.stringify(remoteConnection.localDescription));
   };
 
-  remoteConnection.addEventListener("track", async (event) => {
-    console.log("Track event listener triggered");
-    const otherVideo = document.querySelector("video#other");
-    otherVideo.srcObject = stream;
-  });
   dataChannel.onopen = (event) => {
     console.log("Connection open");
   };
-  stream.getTracks().forEach((track) => {
-    localConnection.addTrack(track, stream);
-  });
+
   localConnection
     .createOffer()
     .then((offer) => {
