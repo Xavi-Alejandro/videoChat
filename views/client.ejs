@@ -17,6 +17,10 @@
         margin: 0;
         padding: 0;
       }
+
+      .users {
+        font-size: 3vh;
+      }
     </style>
   </head>
   <body>
@@ -24,6 +28,13 @@
     <div class="video-container">
       <video id="myself" autoplay playsinline controls="false"></video>
       <video id="other" autoplay playsinline controls="false"></video>
+    </div>
+    <div>
+      <h1>Connected users (Click to call):</h1>
+      <div class="users">
+        <ul id="connectedUsers"></ul>
+      </div>
+      <div id="connectionState"></div>
     </div>
   </body>
 </html>

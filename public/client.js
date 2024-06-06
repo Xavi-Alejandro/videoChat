@@ -2,6 +2,7 @@ const socket = io();
 let localConnection = new RTCPeerConnection();
 let remoteConnection = new RTCPeerConnection();
 const dataChannel = localConnection.createDataChannel("channel");
+let myUsername;
 
 const handleRemoteConnection = async (remoteICE, remoteSocket) => {
   try {
@@ -92,15 +93,32 @@ socket.on("connect", () => {
 
 socket.on("disconnect", () => {
   console.log(`Disconnected from server socket.`); //This is my socket ID. Assigned when I connect to the server.
+  document.querySelector(socket.id).remove();
 });
 
 socket.on("my username", (data) => {
+  myUsername = data.username;
   console.log(`My username: ${data.username}`);
 });
 
 //For purposes of seeing user IDs and using the "callPerson function"
 socket.on("connected clients", (data) => {
   console.log(data.listOfUsers);
+  let connectedUsers = document.querySelector("#connectedUsers");
+  connectedUsers.innerHTML = "";
+  data.listOfUsers.forEach((element) => {
+    let list = document.createElement("li");
+    list.setAttribute("id", element);
+    if (element === myUsername) {
+      list.innerHTML = "Me";
+    } else {
+      list.innerHTML = element;
+      list.onclick = () => {
+        callPerson(element);
+      };
+    }
+    connectedUsers.appendChild(list);
+  });
 });
 
 //My functions
@@ -110,9 +128,13 @@ const startLocalStream = async () => {
     const stream = await openMediaDevices({ video: true, audio: true });
     const localVideo = document.querySelector("video#myself");
     localVideo.srcObject = stream;
+    localVideo.muted = true;
     return stream;
   } catch (error) {
     console.error("Error accessing media devices:", error);
+    alert(
+      "You need a camera to use this application. Please connect one and refresh."
+    );
   }
 };
 
@@ -141,12 +163,14 @@ startLocalStream().then((stream) => {
   remoteConnection.addEventListener("track", (event) => {
     console.log("Track event listener triggered");
     const otherVideo = document.querySelector("video#other");
+    otherVideo.muted = false;
     otherVideo.srcObject = event.streams[0];
   });
 
   localConnection.addEventListener("track", (event) => {
     console.log("Track event listener triggered");
     const otherVideo = document.querySelector("video#other");
+    otherVideo.muted = false;
     otherVideo.srcObject = event.streams[0];
   });
 
